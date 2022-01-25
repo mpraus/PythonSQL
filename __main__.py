@@ -64,7 +64,8 @@ def get_value(connection, row, table, condition):
 
 
 def insert_bestellung(conn):
-    timestamp = date.today()
+    # timestamp = date.today()
+    timestamp = "SYSDATETIME()"
     bestell_nr = int(get_max_value(conn, "BestellungNr", "Bestellungen") + 1)
     kunden_nr = get_random_value(conn, "KundenNr", "Kunden")
     personal_nr = get_random_value(conn, "PersonalNr", "Personal")
@@ -110,7 +111,7 @@ def insert_bestellung(conn):
         kunden_nr=kunden_nr,
         produkt_nr=produkt_nr,
         mitarbeiter_nr=personal_nr,
-        lieferdatum=timestamp + datetime.timedelta(int(random.uniform(1, 14))),
+        lieferdatum="DATEADD(day, %d, SYSDATETIME())" % int(random.uniform(1, 14)),
     )
     print(sql_bestellung)
     print(sql_bestelldaten)

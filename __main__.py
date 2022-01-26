@@ -1,31 +1,14 @@
-import sched, time, random, datetime
-from datetime import date
+import random
+import schedule
 
 from connection import Connection
 
 SERVER = "WIN-Q0KFG511D92"
 DB = "Fashion4You"
-s = sched.scheduler(time.time, time.sleep)
 
 
 def get_connection():
     return Connection(SERVER, DB)
-
-
-def execute_sql(sql, connection):
-    result = connection.query(sql)
-    conn.conn.commit()
-    if result:
-        print(result)
-    s.enter(
-        5,
-        1,
-        execute_sql,
-        (
-            sql,
-            connection,
-        ),
-    )
 
 
 def get_max_value(connection, row, table):
@@ -64,7 +47,6 @@ def get_value(connection, row, table, condition):
 
 
 def insert_bestellung(conn):
-    # timestamp = date.today()
     timestamp = "SYSDATETIME()"
     bestell_nr = int(get_max_value(conn, "BestellungNr", "Bestellungen") + 1)
     kunden_nr = get_random_value(conn, "KundenNr", "Kunden")
@@ -113,31 +95,21 @@ def insert_bestellung(conn):
         mitarbeiter_nr=personal_nr,
         lieferdatum="DATEADD(day, %d, SYSDATETIME())" % int(random.uniform(1, 14)),
     )
-    print(sql_bestellung)
-    print(sql_bestelldaten)
-    print(sql_lieferung)
     conn.query(sql_bestellung)
     conn.query(sql_bestelldaten)
     conn.query(sql_lieferung)
     conn.conn.commit()
+    print("Inserted Bestellung")
 
 
 if __name__ == "__main__":
-    conn = get_connection()
-    print("date ", date.today())
-    conn.open_connection()
-
-    insert_bestellung(conn)
-    print()
-    # conn.conn.commit()
-    # conn.close_connection()
-    # s.enter(
-    #     5,
-    #     1,
-    #     execute_sql,
-    #     (
-    #         sql,
-    #         conn,
-    #     ),
-    # )
-    s.run()
+    try:
+        print("Start of script")
+        conn = get_connection()
+        conn.open_connection()
+        schedule.every(60).seconds.do(insert_bestellung, conn)
+        while True:
+            schedule.run_pending()
+    except (KeyboardInterrupt, SystemExit):
+        print("Keyboard Interrupt")
+        print("End of script")

@@ -1,14 +1,12 @@
 import random
 import schedule
+import time
 
 from connection import Connection
 
 SERVER = "WIN-Q0KFG511D92"
 DB = "Fashion4You"
-
-
-def get_connection():
-    return Connection(SERVER, DB)
+AVG_TIME = 0.275 * 24 * 60 * 60  # Average time (seconds) in Bestellungen
 
 
 def get_max_value(connection, row, table):
@@ -44,6 +42,86 @@ def get_value(connection, row, table, condition):
             row=row, table=table, condition=condition
         )
     ).fetchval()
+
+
+def insert_personal(
+    nachname,
+    vorname,
+    position,
+    anrede,
+    geburtsdatum,
+    einstellung,
+    telefon,
+    durchwahl,
+    bemerkung,
+    vorgesetzter,
+):
+    personal_nr = get_max_value(conn, "PersonalNr", "Personal")
+    query = """INSERT INTO Personal
+    VALUES ({personal_nr}, {nachname}, {vorname}, {position}, {andrede},
+        {geburtsdatum}, {einstellung}, {telefon}, {durchwahl}, {bemerkung},
+        {vorgesetzter})""".format(
+        personal_nr=personal_nr,
+        nachname=nachname,
+        vorname=vorname,
+        position=position,
+        anrede=anrede,
+        geburtsdatum=geburtsdatum,
+        einstellung=einstellung,
+        telefon=telefon,
+        durchwahl=durchwahl,
+        bemerkung=bemerkung,
+        vorgesetzter=vorgesetzter,
+    )
+    conn.query(query)
+    conn.conn.commit()
+
+
+def insert_kunde(
+    frima,
+    kontaktname,
+    strasse,
+    regionnr,
+    ort,
+    bundesstaat,
+    plz,
+    laenderkennz,
+    land,
+    telefon,
+    fax,
+    land,
+):
+    kunden_nr = get_max_value(conn, "KundenNr", "Kunden")
+    query = """INSERT INTO Kunden
+    VALUES ({kunden_nr}, {firma}, {kontaktname}, {strasse}, {regionnr}, {ort},
+    {bundesstaat}, {plz}, {laenderkennz}, {land}, {telefon}, {fax},
+    {land})""".format(
+        kunden_nr=kunden_nr,
+        firma=frima,
+        kontaktname=kontaktname,
+        strasse=strasse,
+        regionnr=regionnr,
+        ort=ort,
+        bundesstaat=bundesstaat,
+        plz=plz,
+        laenderkennz=laenderkennz,
+        land=land,
+        telefon=telefon,
+        fax=fax,
+        land=land,
+    )
+    conn.query(query)
+    conn.conn.commit()
+
+
+def insert_spediteur(spediteur):
+    spediteur_nr = get_max_value(conn, "SpediteurNr", "Spediteure")
+    query = """INSERT INTO Spediteure
+    VALUES ({spediteur_nr}, {spediteur})""".format(
+        spediteur_nr=spediteur_nr, spediteur=spediteur
+    )
+    conn.query(query)
+    conn.conn.commit()
 
 
 def insert_bestellung(conn):
@@ -105,11 +183,13 @@ def insert_bestellung(conn):
 if __name__ == "__main__":
     try:
         print("Start of script")
-        conn = get_connection()
+        conn = Connection(SERVER, DB)
         conn.open_connection()
-        schedule.every(60).seconds.do(insert_bestellung, conn)
+        schedule.every(AVG_TIME).seconds.do(insert_bestellung, conn)
         while True:
             schedule.run_pending()
+            time.sleep(1)
     except (KeyboardInterrupt, SystemExit):
+        schedule.clear()
         print("Keyboard Interrupt")
         print("End of script")

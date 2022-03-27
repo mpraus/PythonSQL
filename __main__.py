@@ -1,12 +1,14 @@
 import random
 import schedule
-import time
+import datetime
+from pick import pick
 
 from connection import Connection
 
 SERVER = "WIN-Q0KFG511D92"
-DB = "Fashion4You"
-AVG_TIME = 0.275 * 24 * 60 * 60  # Average time (seconds) in Bestellungen
+DB_CURRENT = ["Fashion4You"]
+DB_PUMP = ["Fashion4You Current"]
+INS_TIME = 3  # Time (in seconds) between inserts in pump mode
 
 
 def get_max_value(connection, row, table):
@@ -89,7 +91,6 @@ def insert_kunde(
     land,
     telefon,
     fax,
-    land,
 ):
     kunden_nr = get_max_value(conn, "KundenNr", "Kunden")
     query = """INSERT INTO Kunden
@@ -108,7 +109,6 @@ def insert_kunde(
         land=land,
         telefon=telefon,
         fax=fax,
-        land=land,
     )
     conn.query(query)
     conn.conn.commit()
@@ -124,8 +124,8 @@ def insert_spediteur(spediteur):
     conn.conn.commit()
 
 
-def insert_bestellung(conn):
-    timestamp = "SYSDATETIME()"
+def insert_bestellung(conn, timestamp="SYSDATETIME()"):
+    timestamp = timestamp
     bestell_nr = int(get_max_value(conn, "BestellungNr", "Bestellungen") + 1)
     kunden_nr = get_random_value(conn, "KundenNr", "Kunden")
     personal_nr = get_random_value(conn, "PersonalNr", "Personal")
@@ -177,18 +177,42 @@ def insert_bestellung(conn):
     conn.query(sql_bestelldaten)
     conn.query(sql_lieferung)
     conn.conn.commit()
+    print(sql_bestellung)
     print("Inserted Bestellung")
+
+
+def update(conn):
+    while get_max_value(conn, "Bestelldatum", "Bestellungen") < datetime.datetime.now():
+        max_date = get_max_value(conn, "Bestelldatum", "Bestellungen")
+        timestamp = "DATEADD(minute, {interval}, (SELECT MAX(Bestelldatum) FROM Bestellungen))".format(
+            interval=random.uniform(60.0, 240.0)
+        )
+        insert_bestellung(conn, timestamp)
 
 
 if __name__ == "__main__":
     try:
-        print("Start of script")
-        conn = Connection(SERVER, DB)
-        conn.open_connection()
-        schedule.every(AVG_TIME).seconds.do(insert_bestellung, conn)
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        frage_modus = "Welcher Modus?"
+        option_modus = ["Pumpe", "Update"]
+        modus, _ = pick(option_modus, frage_modus)
+
+        frage_datenbank = "Welche Datenbank?"
+
+        if modus == "Update":
+            datenbank, _ = pick(DB_CURRENT, frage_datenbank)
+            conn = Connection(SERVER, datenbank)
+            conn.open_connection()
+            update(conn)
+            conn.close_connection()
+        elif modus == "Pumpe":
+            print("Start of script")
+            datenbank, _ = pick(DB_PUMP, frage_datenbank)
+            conn = Connection(SERVER, datenbank)
+            conn.open_connection()
+            schedule.every(INS_TIME).seconds.do(insert_bestellung, conn)
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
     except (KeyboardInterrupt, SystemExit):
         schedule.clear()
         print("Keyboard Interrupt")

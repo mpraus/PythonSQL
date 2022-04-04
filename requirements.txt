@@ -1,2 +1,3 @@
+pick==1.2.0
 pyodbc==4.0.32
 schedule==1.1.0
